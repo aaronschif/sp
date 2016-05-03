@@ -47,12 +47,16 @@ def init_file_toolbar(window):
     exportAction = QAction('Export', window)
     exportAction.triggered.connect(window.sig_export)
 
+    importAction = QAction('Import', window)
+    importAction.triggered.connect(window.sig_import)
+
     undoAction = QAction('Undo', window)
 
     window.toolbar = window.addToolBar('Exit')
     window.toolbar.addAction(exitAction)
     window.toolbar.addAction(printAction)
     window.toolbar.addAction(exportAction)
+    window.toolbar.addAction(importAction)
     window.toolbar.addAction(undoAction)
 
 
@@ -82,13 +86,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(controller.title())
 
         self.win_editor = EditWindow()
-        doc = self.win_editor.document()
-        doc.setHtml("<h1>foo</h1><p>bar</p>")
-        doc.blockCountChanged.connect(lambda x: print(x))
-        doc.blockCountChanged.connect(lambda x: print(doc.toPlainText()))
-        # doc.contentsChange.connect(lambda p, a, r: print(p,a,r))
-
-        # print(doc.toHtml())
 
         splitter = QSplitter()
         splitter.addWidget(SideWindow())
@@ -122,3 +119,8 @@ class MainWindow(QMainWindow):
     def sig_export(self):
         path = QFileDialog.getSaveFileName(caption="Save", filter="Markdown (*.md);;Text (*.txt);;HTML (*.html *.htm);;All (*)")
         print(path)
+
+    def sig_import(self):
+        path = QFileDialog.getOpenFileName()
+        self.controller.handle_load(path)
+        self.win_editor.setDocument(self.win_editor.document())
