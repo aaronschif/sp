@@ -31,11 +31,12 @@ class Document(object):
     def as_tree(self):
         root = []
         current_level = (DocPartsEnum.H1, [])
-        for kind, text in self.parts:
-            nestable, rank = kind
-            if nestable:
-                if rank > current_level[0]:
+        # for kind, text in self.parts:
+        #     nestable, rank = kind
+        #     if nestable:
+        #         if rank > current_level[0]:
 
+        
 
 
 
