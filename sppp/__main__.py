@@ -1,7 +1,24 @@
 import sys
 from pkgutil import get_data
 from PyQt5.Qt import (QMainWindow, QApplication, QTextEdit, QToolBar, QAction, QIcon, QPixmap,
-    QSettings, QStatusBar)
+    QSettings, QStatusBar, QTextCharFormat, QTextBlockFormat)
+import speech_recognition
+from contextlib import ExitStack
+
+
+class Speech(object):
+    def __init__(self, callback):
+        self.mic = speech_recognition.Microphone()
+        self.rec = speech_recognition.Recognizer()
+        self.callback = callback
+
+    def start(self):
+        with self.mic:
+            self.rec.adjust_for_ambient_noise(self.mic)
+        self.rec.listen_in_background(self.mic, self._callback)
+
+    def _callback(self, rec, audio):
+        self.callback(rec.recognize_google(audio))
 
 
 class QuiController(object):
@@ -9,7 +26,7 @@ class QuiController(object):
         pass
 
     def window_init(self):
-        self.document_editor = QTextEdit()
+        self.document_editor = QuiTextEditor()
         self.document = self.document_editor.document()
 
         self.settings = QSettings("MyCompany", "MyApp")
@@ -75,7 +92,16 @@ class QuiToolbar(QToolBar):
 
 
 class QuiTextEditor(QTextEdit):
-    pass
+    def __init__(self):
+        super().__init__()
+        formc = QTextCharFormat()
+        formc.setFontItalic(True)
+        formc.setFontWeight(3)
+        form = QTextBlockFormat()
+        form.setLineHeight(200, 1)
+
+        cur = self.textCursor()
+        Speech(cur.insertText).start()
 
 
 class QuiMain(QMainWindow):
