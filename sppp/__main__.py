@@ -1,9 +1,9 @@
 import sys
 from pkgutil import get_data
 from PyQt5.Qt import (QMainWindow, QApplication, QTextEdit, QToolBar, QAction, QIcon, QPixmap,
-    QSettings, QStatusBar, QTextCharFormat, QTextBlockFormat)
+    QSettings, QStatusBar, QTextCharFormat, QTextBlockFormat, pyqtSignal, QObject, QFileDialog)
 import speech_recognition
-from contextlib import ExitStack
+from contextlib import ExitStack, suppress
 
 
 class Speech(object):
@@ -18,7 +18,9 @@ class Speech(object):
         self.rec.listen_in_background(self.mic, self._callback)
 
     def _callback(self, rec, audio):
-        self.callback(rec.recognize_google(audio))
+        # self.callback(rec.recognize_sphinx(audio))
+        with suppress(speech_recognition.UnknownValueError):
+            self.callback(rec.recognize_google(audio))
 
 
 class QuiController(object):
@@ -26,7 +28,7 @@ class QuiController(object):
         pass
 
     def window_init(self):
-        self.document_editor = QuiTextEditor()
+        self.document_editor = QuiTextEditor(self)
         self.document = self.document_editor.document()
 
         self.settings = QSettings("MyCompany", "MyApp")
@@ -36,6 +38,7 @@ class QuiController(object):
 
     def start(self):
         app = QApplication(sys.argv)
+        app.setApplicationName('QuickText')
 
         self.window_init()
 
@@ -92,7 +95,9 @@ class QuiToolbar(QToolBar):
 
 
 class QuiTextEditor(QTextEdit):
-    def __init__(self):
+    new_speech_signal = pyqtSignal(str)
+
+    def __init__(self, controller):
         super().__init__()
         formc = QTextCharFormat()
         formc.setFontItalic(True)
@@ -101,7 +106,22 @@ class QuiTextEditor(QTextEdit):
         form.setLineHeight(200, 1)
 
         cur = self.textCursor()
-        Speech(cur.insertText).start()
+        cur.insertText('Foo')
+        cur.movePosition(1, 1, 8)
+
+        # print(dir(new_speech_signal))
+        # new_speech_signal = QObject()
+        Speech(self.new_speech_signal.emit).start()
+        self.new_speech_signal.connect(cur.insertText)
+
+    def foo(self):
+        cur = self.textCursor()
+        cur.insertText('Foo')
+        chars = cur.positionInBlock()
+        for i in range(chars):
+            cur.deletePreviousChar()
+        print(cur.block().text())
+        cur.movePosition(1, 1, 8)
 
 
 class QuiMain(QMainWindow):
@@ -109,7 +129,7 @@ class QuiMain(QMainWindow):
     def __init__(self, controller):
         super().__init__()
 
-        self.setWindowTitle("Writer")
+        self.setWindowTitle("QuickText")
         self.setGeometry(100,100,1030,800)
         pixmap = QPixmap()
         pixmap.loadFromData(get_data(__name__, 'icon.png'))
@@ -118,12 +138,13 @@ class QuiMain(QMainWindow):
 
         self.setCentralWidget(controller.document_editor)
         self.addToolBar(QuiToolbar(self, 'FileToolbar', [
-            (None, "Save", "Exit", None, controller.end),
+            (None, "Open", "Open a file", None, lambda: QFileDialog.getOpenFileName()),
+            (None, "Save", "Save the current file", None, lambda: QFileDialog.getSaveFileName()),
             (None, "Exit", "Exit", None, controller.end),
         ]))
 
         self.addToolBar(QuiToolbar(self, 'FormatToolbar', [
-            (None, "Heading 1", "Heading level one", None, lambda: print('foo')),
+            (None, "Heading 1", "Heading level one", None, lambda: controller.document_editor.foo()),
             (None, "Heading 2", "Heading level two", None, lambda: print('foo')),
             (None, "Heading 3", "Heading level three", None, lambda: print('foo')),
             (None, "Heading 4", "Heading level four", None, lambda: print('foo')),
