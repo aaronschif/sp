@@ -18,9 +18,9 @@ class Speech(object):
         self.rec.listen_in_background(self.mic, self._callback)
 
     def _callback(self, rec, audio):
-        # self.callback(rec.recognize_sphinx(audio))
         with suppress(speech_recognition.UnknownValueError):
-            self.callback(rec.recognize_google(audio))
+            self.callback(rec.recognize_sphinx(audio))
+            # self.callback(rec.recognize_google(audio))
 
 
 class QuiController(object):
