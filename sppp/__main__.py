@@ -1,7 +1,9 @@
 import sys
 from pkgutil import get_data
 from PyQt5.Qt import (QMainWindow, QApplication, QTextEdit, QToolBar, QAction, QIcon, QPixmap,
-    QSettings, QStatusBar, QTextCharFormat, QTextBlockFormat, pyqtSignal, QObject, QFileDialog)
+    QSettings, QStatusBar, QTextCharFormat, QTextBlockFormat, pyqtSignal, QObject, QFileDialog,
+    QDockWidget, QSpinBox, Qt, QWidget)
+from PyQt5.Qt import *
 import speech_recognition
 from contextlib import ExitStack, suppress
 
@@ -21,6 +23,27 @@ class Speech(object):
         with suppress(speech_recognition.UnknownValueError):
             self.callback(rec.recognize_sphinx(audio))
             # self.callback(rec.recognize_google(audio))
+
+
+class QuiDock(QDockWidget):
+    def __init__(self, controller):
+        super().__init__()
+        self.setObjectName('SettingsDock')
+
+        box = QVBoxLayout()
+        box.setAlignment(Qt.AlignTop)
+        group = QGroupBox("Speech to text engine")
+        stte = QVBoxLayout()
+        group.setLayout(stte)
+        google = QCheckBox('Google')
+        google.setDisabled(True)
+        stte.addWidget(google)
+        stte.addWidget(QCheckBox('Sphinx'))
+
+        box.addWidget(group)
+        widget = QWidget()
+        widget.setLayout(box)
+        self.setWidget(widget)
 
 
 class QuiController(object):
@@ -94,8 +117,23 @@ class QuiToolbar(QToolBar):
             self.addAction(QuiAction(window, control))
 
 
+class QuiFormat(QTextCharFormat):
+    def __init__(self, size, weight=QFont.Normal):
+        super().__init__()
+        self.setFontWeight(weight)
+        self.setFontPointSize(size)
+
 class QuiTextEditor(QTextEdit):
     new_speech_signal = pyqtSignal(str)
+
+    format_h1 = QuiFormat(30)
+    format_h2 = QuiFormat(25)
+    format_h3 = QuiFormat(20)
+    format_h4 = QuiFormat(15)
+    format_h5 = QuiFormat(10)
+    format_h6 = QuiFormat(5)
+
+    format_p = QuiFormat(10)
 
     def __init__(self, controller):
         super().__init__()
@@ -106,22 +144,33 @@ class QuiTextEditor(QTextEdit):
         form.setLineHeight(200, 1)
 
         cur = self.textCursor()
-        cur.insertText('Foo')
-        cur.movePosition(1, 1, 8)
+        cur.insertText('A', self.format_h1)
+        cur.insertText('B', self.format_h2)
+        cur.insertText('C', self.format_h3)
+        cur.insertText('D', self.format_h4)
+        cur.insertText('E', self.format_h5)
+        cur.insertText('F', self.format_h6)
 
         # print(dir(new_speech_signal))
         # new_speech_signal = QObject()
-        Speech(self.new_speech_signal.emit).start()
+        # Speech(self.new_speech_signal.emit).start()
         self.new_speech_signal.connect(cur.insertText)
 
+    def setCurrentFont(self, font):
+        pass
+
     def foo(self):
+
         cur = self.textCursor()
-        cur.insertText('Foo')
+        last_text = cur.block().text()
+        last_pos = cur.position()
+        cur.movePosition(cur.EndOfBlock)
         chars = cur.positionInBlock()
         for i in range(chars):
             cur.deletePreviousChar()
-        print(cur.block().text())
-        cur.movePosition(1, 1, 8)
+        cur.insertText(last_text, self.format_h1)
+        cur.setPosition(last_pos)
+        self.setTextCursor(cur)
 
 
 class QuiMain(QMainWindow):
@@ -135,6 +184,7 @@ class QuiMain(QMainWindow):
         pixmap.loadFromData(get_data(__name__, 'icon.png'))
         self.setWindowIcon(QIcon(pixmap))
         self.setStatusBar(QuiStatusBar())
+        self.addDockWidget(Qt.RightDockWidgetArea, QuiDock(controller))
 
         self.setCentralWidget(controller.document_editor)
         self.addToolBar(QuiToolbar(self, 'FileToolbar', [
