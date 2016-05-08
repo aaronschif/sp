@@ -28,10 +28,13 @@ class Speech(object):
 class QuiDock(QDockWidget):
     def __init__(self, controller):
         super().__init__()
+        print(speech_recognition.Microphone.list_microphone_names())
+
         self.setObjectName('SettingsDock')
 
         box = QVBoxLayout()
         box.setAlignment(Qt.AlignTop)
+
         group = QGroupBox("Speech to text engine")
         stte = QVBoxLayout()
         group.setLayout(stte)
@@ -39,6 +42,15 @@ class QuiDock(QDockWidget):
         google.setDisabled(True)
         stte.addWidget(google)
         stte.addWidget(QCheckBox('Sphinx'))
+        box.addWidget(group)
+
+        group = QGroupBox("Microphone")
+        group_layout = QVBoxLayout()
+        group.setLayout(group_layout)
+        mic_box = QComboBox()
+        group_layout.addWidget(mic_box)
+        for mic in speech_recognition.Microphone.list_microphone_names():
+            mic_box.addItem(mic)
 
         box.addWidget(group)
         widget = QWidget()
@@ -126,7 +138,7 @@ class QuiFormat(QTextCharFormat):
 class QuiTextEditor(QTextEdit):
     new_speech_signal = pyqtSignal(str)
 
-    format_h1 = QuiFormat(30)
+    format_h1 = QuiFormat(30, QFont.Bold)
     format_h2 = QuiFormat(25)
     format_h3 = QuiFormat(20)
     format_h4 = QuiFormat(15)
@@ -144,12 +156,12 @@ class QuiTextEditor(QTextEdit):
         form.setLineHeight(200, 1)
 
         cur = self.textCursor()
-        cur.insertText('A', self.format_h1)
-        cur.insertText('B', self.format_h2)
-        cur.insertText('C', self.format_h3)
-        cur.insertText('D', self.format_h4)
-        cur.insertText('E', self.format_h5)
-        cur.insertText('F', self.format_h6)
+        cur.insertText('A\n', self.format_h1)
+        cur.insertText('B\n', self.format_h2)
+        cur.insertText('C\n', self.format_h3)
+        cur.insertText('D\n', self.format_h4)
+        cur.insertText('E\n', self.format_h5)
+        cur.insertText('F\n', self.format_h6)
 
         # print(dir(new_speech_signal))
         # new_speech_signal = QObject()
@@ -157,20 +169,22 @@ class QuiTextEditor(QTextEdit):
         self.new_speech_signal.connect(cur.insertText)
 
     def setCurrentFont(self, font):
-        pass
-
-    def foo(self):
-
         cur = self.textCursor()
+        cur.beginEditBlock()
         last_text = cur.block().text()
         last_pos = cur.position()
         cur.movePosition(cur.EndOfBlock)
         chars = cur.positionInBlock()
         for i in range(chars):
             cur.deletePreviousChar()
-        cur.insertText(last_text, self.format_h1)
-        cur.setPosition(last_pos)
-        self.setTextCursor(cur)
+            cur.insertText(last_text, font)
+            cur.setPosition(last_pos)
+            self.setTextCursor(cur)
+        cur.endEditBlock()
+
+    def foo(self):
+        pass
+
 
 
 class QuiMain(QMainWindow):
@@ -194,13 +208,13 @@ class QuiMain(QMainWindow):
         ]))
 
         self.addToolBar(QuiToolbar(self, 'FormatToolbar', [
-            (None, "Heading 1", "Heading level one", None, lambda: controller.document_editor.foo()),
-            (None, "Heading 2", "Heading level two", None, lambda: print('foo')),
-            (None, "Heading 3", "Heading level three", None, lambda: print('foo')),
-            (None, "Heading 4", "Heading level four", None, lambda: print('foo')),
-            (None, "Heading 5", "Heading level five", None, lambda: print('foo')),
-            (None, "Heading 6", "Heading level six", None, lambda: print('foo')),
-            (None, "Body", "Simple body text", None, lambda: print('foo')),
+            (None, "Heading 1", "Heading level one", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h1)),
+            (None, "Heading 2", "Heading level two", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h2)),
+            (None, "Heading 3", "Heading level three", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h3)),
+            (None, "Heading 4", "Heading level four", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h4)),
+            (None, "Heading 5", "Heading level five", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h5)),
+            (None, "Heading 6", "Heading level six", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h6)),
+            (None, "Body", "Simple body text", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_p)),
         ]))
 
 
