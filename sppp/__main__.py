@@ -177,14 +177,10 @@ class QuiTextEditor(QTextEdit):
         chars = cur.positionInBlock()
         for i in range(chars):
             cur.deletePreviousChar()
-            cur.insertText(last_text, font)
-            cur.setPosition(last_pos)
-            self.setTextCursor(cur)
+        cur.insertText(last_text, font)
+        cur.setPosition(last_pos)
+        self.setTextCursor(cur)
         cur.endEditBlock()
-
-    def foo(self):
-        pass
-
 
 
 class QuiMain(QMainWindow):
