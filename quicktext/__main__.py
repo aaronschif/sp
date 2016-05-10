@@ -198,7 +198,7 @@ class QuiTextEditor(QTextEdit):
     format_h5 = QuiFormat(25)
     format_h6 = QuiFormat(20)
 
-    format_p = QuiFormat(14)
+    format_p = QuiFormat(11)
 
     def __init__(self, controller):
         super().__init__()
@@ -208,15 +208,9 @@ class QuiTextEditor(QTextEdit):
         form = QTextBlockFormat()
         form.setLineHeight(200, 1)
 
-        cur = self.textCursor()
-        cur.insertText('A\n', self.format_h1)
-        cur.insertText('B\n', self.format_h2)
-        cur.insertText('C\n', self.format_h3)
-        cur.insertText('D\n', self.format_h4)
-        cur.insertText('E\n', self.format_h5)
-        cur.insertText('F\n', self.format_h6)
 
-        # print(dir(new_speech_signal))
+        cur = self.textCursor()
+        cur.insertText('', self.format_p)
         new_speech_signal = QObject()
         controller.speech.connect(self.new_speech_signal.emit)
         controller.speech.start()
