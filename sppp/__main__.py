@@ -6,6 +6,10 @@ from PyQt5.Qt import (QMainWindow, QApplication, QTextEdit, QToolBar, QAction, Q
 from PyQt5.Qt import *
 import speech_recognition
 from contextlib import ExitStack, suppress
+from markdown import Markdown
+from markdown import util
+from markdown.serializers import to_html_string
+ElementTree = util.etree.ElementTree
 
 
 class Speech(object):
@@ -19,16 +23,21 @@ class Speech(object):
             self.rec.adjust_for_ambient_noise(self.mic)
         self.rec.listen_in_background(self.mic, self._callback)
 
+    def toggle(self):
+        pass
+
     def _callback(self, rec, audio):
         with suppress(speech_recognition.UnknownValueError):
-            self.callback(rec.recognize_sphinx(audio))
+            try:
+                self.callback(rec.recognize_sphinx(audio))
+            except speech_recognition.RequestError:
+                pass
             # self.callback(rec.recognize_google(audio))
 
 
 class QuiDock(QDockWidget):
     def __init__(self, controller):
         super().__init__()
-        print(speech_recognition.Microphone.list_microphone_names())
 
         self.setObjectName('SettingsDock')
 
@@ -97,6 +106,32 @@ class QuiController(object):
 
         sys.exit(ret)
 
+    def save(self):
+        path = QFileDialog.getSaveFileName()
+        cur = self.document.begin()
+        last = self.document.end()
+        while cur != last:
+            # print(cur.text())
+            # print(cur.charFormat(), cur.charFormatIndex(), self.document_editor.format_p)
+            cur = cur.next()
+
+    def load(self):
+        path, t = QFileDialog.getOpenFileName()
+        markdown = Markdown()
+        markdown.serializer = self._loader
+        markdown.convertFile(path)
+
+    def _loader(self, element):
+        root = ElementTree(element).getroot()
+        self.document.clear()
+        cur = self.document_editor.textCursor()
+        for child in root.getchildren():
+            form = getattr(self.document_editor, 'format_{}'.format(child.tag), None)
+
+            cur.insertText(child.text+'\n', form)
+
+        return to_html_string(element)
+
 
 class QuiStatusBar(QStatusBar):
     def __init__(self):
@@ -138,14 +173,14 @@ class QuiFormat(QTextCharFormat):
 class QuiTextEditor(QTextEdit):
     new_speech_signal = pyqtSignal(str)
 
-    format_h1 = QuiFormat(30, QFont.Bold)
-    format_h2 = QuiFormat(25)
-    format_h3 = QuiFormat(20)
-    format_h4 = QuiFormat(15)
-    format_h5 = QuiFormat(10)
-    format_h6 = QuiFormat(5)
+    format_h1 = QuiFormat(40, QFont.Bold)
+    format_h2 = QuiFormat(35, QFont.Bold)
+    format_h3 = QuiFormat(30, QFont.Bold)
+    format_h4 = QuiFormat(30)
+    format_h5 = QuiFormat(25)
+    format_h6 = QuiFormat(20)
 
-    format_p = QuiFormat(10)
+    format_p = QuiFormat(14)
 
     def __init__(self, controller):
         super().__init__()
@@ -198,19 +233,19 @@ class QuiMain(QMainWindow):
 
         self.setCentralWidget(controller.document_editor)
         self.addToolBar(QuiToolbar(self, 'FileToolbar', [
-            (None, "Open", "Open a file", None, lambda: QFileDialog.getOpenFileName()),
-            (None, "Save", "Save the current file", None, lambda: QFileDialog.getSaveFileName()),
+            (None, "Open", "Open a file", None, controller.load),
+            (None, "Save", "Save the current file", None, controller.save),
             (None, "Exit", "Exit", None, controller.end),
         ]))
 
         self.addToolBar(QuiToolbar(self, 'FormatToolbar', [
-            (None, "Heading 1", "Heading level one", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h1)),
-            (None, "Heading 2", "Heading level two", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h2)),
-            (None, "Heading 3", "Heading level three", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h3)),
-            (None, "Heading 4", "Heading level four", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h4)),
-            (None, "Heading 5", "Heading level five", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h5)),
-            (None, "Heading 6", "Heading level six", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h6)),
-            (None, "Body", "Simple body text", None, lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_p)),
+            (None, "Heading 1", "Heading level one", "Ctrl+1", lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h1)),
+            (None, "Heading 2", "Heading level two", "Ctrl+2", lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h2)),
+            (None, "Heading 3", "Heading level three", "Ctrl+3", lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h3)),
+            (None, "Heading 4", "Heading level four", "Ctrl+4", lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h4)),
+            (None, "Heading 5", "Heading level five", "Ctrl+5", lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h5)),
+            (None, "Heading 6", "Heading level six", "Ctrl+6", lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_h6)),
+            (None, "Body", "Simple body text", "Ctrl+`", lambda: controller.document_editor.setCurrentFont(controller.document_editor.format_p)),
         ]))
 
 
