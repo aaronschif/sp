@@ -29,9 +29,13 @@ class Speech(object):
 
     def end(self):
         self._stopper()
+        self._stopper = None
 
     def toggle(self, name):
-        pass
+        if self._stopper is None and name:
+            self.start()
+        elif self._stopper and not name:
+            self.end()
 
     def selectMic(self, name):
         self.end()
@@ -69,6 +73,15 @@ class QuiDock(QDockWidget):
         # stte.addWidget(QCheckBox('Sphinx'))
         # box.addWidget(group)
 
+        group = QGroupBox("Listen")
+        group_layout = QVBoxLayout()
+        group.setLayout(group_layout)
+        listen = QCheckBox("Listen")
+        group_layout.addWidget(listen)
+        listen.stateChanged.connect(controller.speech.toggle)
+
+        box.addWidget(group)
+
         group = QGroupBox("Microphone")
         group_layout = QVBoxLayout()
         group.setLayout(group_layout)
@@ -77,8 +90,8 @@ class QuiDock(QDockWidget):
         for mic in speech_recognition.Microphone.list_microphone_names():
             mic_box.addItem(mic)
         mic_box.currentIndexChanged.connect(lambda num: controller.speech.selectMic(num))
-
         box.addWidget(group)
+
         widget = QWidget()
         widget.setLayout(box)
         self.setWidget(widget)
