@@ -13,26 +13,42 @@ ElementTree = util.etree.ElementTree
 
 
 class Speech(object):
-    def __init__(self, callback):
+    def __init__(self):
         self.mic = speech_recognition.Microphone()
         self.rec = speech_recognition.Recognizer()
-        self.callback = callback
+        self.callback = None
+        self._stopper = None
+
+    def connect(self, controller):
+        self.callback = controller
 
     def start(self):
         with self.mic:
             self.rec.adjust_for_ambient_noise(self.mic)
-        self.rec.listen_in_background(self.mic, self._callback)
+        self._stopper = self.rec.listen_in_background(self.mic, self._callback)
 
-    def toggle(self):
+    def end(self):
+        self._stopper()
+
+    def toggle(self, name):
         pass
+
+    def selectMic(self, name):
+        self.end()
+        with suppress(OSError):
+            mic = speech_recognition.Microphone(name)
+            with mic:
+                pass
+            self.mic = mic
+        self.start()
 
     def _callback(self, rec, audio):
         with suppress(speech_recognition.UnknownValueError):
             try:
-                self.callback(rec.recognize_sphinx(audio))
+                # self.callback(rec.recognize_sphinx(audio))
+                self.callback(rec.recognize_google(audio))
             except speech_recognition.RequestError:
                 pass
-            # self.callback(rec.recognize_google(audio))
 
 
 class QuiDock(QDockWidget):
@@ -44,14 +60,14 @@ class QuiDock(QDockWidget):
         box = QVBoxLayout()
         box.setAlignment(Qt.AlignTop)
 
-        group = QGroupBox("Speech to text engine")
-        stte = QVBoxLayout()
-        group.setLayout(stte)
-        google = QCheckBox('Google')
-        google.setDisabled(True)
-        stte.addWidget(google)
-        stte.addWidget(QCheckBox('Sphinx'))
-        box.addWidget(group)
+        # group = QGroupBox("Speech to text engine")
+        # stte = QVBoxLayout()
+        # group.setLayout(stte)
+        # google = QCheckBox('Google')
+        # # google.setDisabled(True)
+        # stte.addWidget(google)
+        # stte.addWidget(QCheckBox('Sphinx'))
+        # box.addWidget(group)
 
         group = QGroupBox("Microphone")
         group_layout = QVBoxLayout()
@@ -60,6 +76,7 @@ class QuiDock(QDockWidget):
         group_layout.addWidget(mic_box)
         for mic in speech_recognition.Microphone.list_microphone_names():
             mic_box.addItem(mic)
+        mic_box.currentIndexChanged.connect(lambda num: controller.speech.selectMic(num))
 
         box.addWidget(group)
         widget = QWidget()
@@ -72,6 +89,7 @@ class QuiController(object):
         pass
 
     def window_init(self):
+        self.speech = Speech()
         self.document_editor = QuiTextEditor(self)
         self.document = self.document_editor.document()
 
@@ -107,13 +125,13 @@ class QuiController(object):
         sys.exit(ret)
 
     def save(self):
-        path = QFileDialog.getSaveFileName()
+        path, t = QFileDialog.getSaveFileName()
         cur = self.document.begin()
         last = self.document.end()
-        while cur != last:
-            # print(cur.text())
-            # print(cur.charFormat(), cur.charFormatIndex(), self.document_editor.format_p)
-            cur = cur.next()
+        with open(path, 'w') as f:
+            while cur != last:
+                f.write(cur.text()+'\n\n')
+                cur = cur.next()
 
     def load(self):
         path, t = QFileDialog.getOpenFileName()
@@ -199,8 +217,9 @@ class QuiTextEditor(QTextEdit):
         cur.insertText('F\n', self.format_h6)
 
         # print(dir(new_speech_signal))
-        # new_speech_signal = QObject()
-        # Speech(self.new_speech_signal.emit).start()
+        new_speech_signal = QObject()
+        controller.speech.connect(self.new_speech_signal.emit)
+        controller.speech.start()
         self.new_speech_signal.connect(cur.insertText)
 
     def setCurrentFont(self, font):
